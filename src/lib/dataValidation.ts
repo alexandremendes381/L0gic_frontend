@@ -70,20 +70,17 @@ export function validateUserData(userData: CreateUserRequest): void {
   if (missing.length > 0) {
     throw new Error(`Campos obrigatórios: ${missing.join(', ')}`)
   }
-  
-  // Validar formato do email
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(userData.email)) {
     throw new Error('Email inválido')
   }
-  
-  // Validar formato da data
+
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/
   if (!dateRegex.test(userData.birthDate)) {
     throw new Error('Data deve estar no formato YYYY-MM-DD')
   }
-  
-  // Validar se não há campos muito longos (prevenção de ataques)
+
   const maxLengths = {
     name: 100,
     email: 100,
