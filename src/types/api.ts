@@ -1,10 +1,10 @@
+import { TrackingInfo } from '@/hooks/useTracking'
 import { FormData } from '@/lib/validation'
 import { CreateUserRequest } from '@/services/userService'
-import { TrackingData } from '@/hooks/useTracking'
 
 export function mapFormDataToApiRequest(
   formData: FormData, 
-  trackingData?: TrackingData
+  trackingData?: TrackingInfo
 ): CreateUserRequest {
   return {
     name: formData.nome,

@@ -19,7 +19,7 @@ import {
 import { createUser } from '@/services/userService';
 import { mapFormDataToApiRequest } from '@/types/api';
 
-import { useTracking } from '@/hooks/useTracking';
+import { UseTracking } from '@/hooks/useTracking';
 import { generateUUID, normalizeEmail, normalizePhoneBR, pushDataLayer } from '@/lib/gtmConfig';
 
 
@@ -36,20 +36,17 @@ export default function ContactForm() {
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [submitted, setSubmitted] = useState(false);
 
-  // Tracking (UTMs / referrer)
-  const { attribution } = useTracking();
+  const { attribution } = UseTracking();
 
   const createUserMutation = useMutation({
     mutationFn: createUser,
     onSuccess: () => {
-      // Dispara evento de lead SOMENTE depois do backend confirmar
       const firstName = formData.nome.trim().split(/\s+/)[0] || '';
 
       pushDataLayer({
         event: 'generate_lead',
         event_id: generateUUID(),
 
-        // Dados do lead
         lead_email: normalizeEmail(formData.email),
         lead_phone: normalizePhoneBR(formData.telefone),
         lead_full_name: formData.nome.trim(),
@@ -57,18 +54,14 @@ export default function ContactForm() {
         lead_position: formData.cargo.trim(),
         lead_message_length: formData.mensagem.length,
 
-        // Valor (caso queira usar futuramente para LTV; aqui 0)
         lead_value: 0,
         lead_currency: 'BRL',
 
-        // Identificadores do formulário
         lead_source: 'form_home',
         lead_form_name: 'contact_home_main',
 
-        // Página atual
         page_path: typeof window !== 'undefined' ? window.location.pathname : '',
 
-        // UTMs e clids
         utm_source: attribution.utmSource,
         utm_medium: attribution.utmMedium,
         utm_campaign: attribution.utmCampaign,
@@ -78,7 +71,6 @@ export default function ContactForm() {
         fbclid: attribution.fbclid
       });
 
-      // Reseta UI
       setSubmitted(true);
       setFormData({
         nome: '',
@@ -117,7 +109,7 @@ export default function ContactForm() {
       return;
     }
 
-    const apiPayload = mapFormDataToApiRequest(formData, { attribution });
+    const apiPayload = mapFormDataToApiRequest(formData, { attribution, isReady: true });
     setErrors({});
     createUserMutation.mutate(apiPayload);
   }

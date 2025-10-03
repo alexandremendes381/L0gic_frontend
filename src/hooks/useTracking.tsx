@@ -40,7 +40,7 @@ function extractAttributionParams(searchParams: URLSearchParams): AttributionPar
 
  
 
-export function useTracking(): TrackingInfo {
+export function UseTracking(): TrackingInfo {
   const searchParams = useSearchParams();
   const [trackingInfo, setTrackingInfo] = useState<TrackingInfo>({
     attribution: {},
