@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-
 
 export interface AttributionParams {
   utmSource?: string;
@@ -13,7 +11,6 @@ export interface AttributionParams {
   gclid?: string;
   fbclid?: string;
 }
-
 
 export interface TrackingInfo {
   attribution: AttributionParams;
@@ -38,10 +35,7 @@ function extractAttributionParams(searchParams: URLSearchParams): AttributionPar
   };
 }
 
- 
-
 export function UseTracking(): TrackingInfo {
-  const searchParams = useSearchParams();
   const [trackingInfo, setTrackingInfo] = useState<TrackingInfo>({
     attribution: {},
     referrer: undefined,
@@ -51,7 +45,8 @@ export function UseTracking(): TrackingInfo {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const attribution = extractAttributionParams(searchParams);
+    const urlParams = new URLSearchParams(window.location.search);
+    const attribution = extractAttributionParams(urlParams);
     const referrer = document.referrer || undefined;
 
     setTrackingInfo({
@@ -59,7 +54,7 @@ export function UseTracking(): TrackingInfo {
       referrer,
       isReady: true
     });
-  }, [searchParams]);
+  }, []);
 
   return trackingInfo;
 }
