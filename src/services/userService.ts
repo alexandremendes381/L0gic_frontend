@@ -1,7 +1,3 @@
-/**
- * Serviço para integração com a API de usuários
- */
-
 import { prepareUserDataForAPI, createSafeJSON } from '@/lib/dataValidation'
 
 export interface CreateUserRequest {
@@ -24,18 +20,12 @@ export interface CreateUserResponse {
   createdAt: string
 }
 
-/**
- * Envia dados do usuário para a API com validação robusta
- */
 export async function createUser(userData: CreateUserRequest): Promise<CreateUserResponse> {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
   const url = `${baseUrl}/api/users`
   
   try {
-    // 1. Preparar e validar dados
     const validatedData = prepareUserDataForAPI(userData)
-    
-    // 2. Criar JSON de forma segura
     const jsonString = createSafeJSON(validatedData)
     
     const response = await fetch(url, {
@@ -60,13 +50,11 @@ export async function createUser(userData: CreateUserRequest): Promise<CreateUse
           errorMessage = textError || errorMessage
         }
       } catch (parseError) {
-        // Ignorar erro de parse da resposta de erro
       }
       
       throw new Error(errorMessage)
     }
 
-    // 3. Processar resposta
     const responseText = await response.text()
     const result = JSON.parse(responseText)
     return result

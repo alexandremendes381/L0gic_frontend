@@ -1,16 +1,27 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 
-import { FormData, ValidationErrors, validateForm, formatPhone, getStateFromPhone } from '@/lib/validation'
-import { createUser } from '@/services/userService'
-import { mapFormDataToApiRequest } from '@/types/api'
-import { useTracking } from '@/hooks/useTracking'
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+
+import {
+  FormData,
+  ValidationErrors,
+  validateForm,
+  formatPhone,
+  getStateFromPhone
+} from '@/lib/validation';
+
+import { createUser } from '@/services/userService';
+import { mapFormDataToApiRequest } from '@/types/api';
+
+import { useTracking } from '@/hooks/useTracking';
+import { generateUUID, normalizeEmail, normalizePhoneBR, pushDataLayer } from '@/lib/gtmConfig';
+
 
 export default function ContactForm() {
   const [formData, setFormData] = useState<FormData>({
@@ -20,18 +31,55 @@ export default function ContactForm() {
     cargo: '',
     dataNascimento: '',
     mensagem: ''
-  })
+  });
 
-  const [errors, setErrors] = useState<ValidationErrors>({})
-  const [submitted, setSubmitted] = useState(false)
-  
-  const trackingData = useTracking()
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [submitted, setSubmitted] = useState(false);
 
+  // Tracking (UTMs / referrer)
+  const { attribution } = useTracking();
 
   const createUserMutation = useMutation({
     mutationFn: createUser,
-    onSuccess: (data) => {
-      setSubmitted(true)
+    onSuccess: () => {
+      // Dispara evento de lead SOMENTE depois do backend confirmar
+      const firstName = formData.nome.trim().split(/\s+/)[0] || '';
+
+      pushDataLayer({
+        event: 'generate_lead',
+        event_id: generateUUID(),
+
+        // Dados do lead
+        lead_email: normalizeEmail(formData.email),
+        lead_phone: normalizePhoneBR(formData.telefone),
+        lead_full_name: formData.nome.trim(),
+        lead_first_name: firstName,
+        lead_position: formData.cargo.trim(),
+        lead_message_length: formData.mensagem.length,
+
+        // Valor (caso queira usar futuramente para LTV; aqui 0)
+        lead_value: 0,
+        lead_currency: 'BRL',
+
+        // Identificadores do formulário
+        lead_source: 'form_home',
+        lead_form_name: 'contact_home_main',
+
+        // Página atual
+        page_path: typeof window !== 'undefined' ? window.location.pathname : '',
+
+        // UTMs e clids
+        utm_source: attribution.utmSource,
+        utm_medium: attribution.utmMedium,
+        utm_campaign: attribution.utmCampaign,
+        utm_term: attribution.utmTerm,
+        utm_content: attribution.utmContent,
+        gclid: attribution.gclid,
+        fbclid: attribution.fbclid
+      });
+
+      // Reseta UI
+      setSubmitted(true);
       setFormData({
         nome: '',
         email: '',
@@ -39,58 +87,42 @@ export default function ContactForm() {
         cargo: '',
         dataNascimento: '',
         mensagem: ''
-      })
-      setErrors({})
+      });
+      setErrors({});
     },
-    onError: (error) => {
-      setErrors({ submit: error.message })
+    onError: (error: any) => {
+      setErrors({ submit: error?.message || 'Erro ao enviar' });
     }
-  })
+  });
 
-
-  const handleInputChange = (field: keyof FormData, value: string) => {
+  function handleInputChange(field: keyof FormData, value: string) {
     if (field === 'telefone') {
-      value = formatPhone(value)
+      value = formatPhone(value);
     }
-    
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
+    setFormData(prev => ({ ...prev, [field]: value }));
 
     if (errors[field]) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: undefined
-      }))
+      setErrors(prev => ({ ...prev, [field]: undefined }));
     }
   }
 
-  const handleSubmit = (event?: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>) => {
-    if (event && 'preventDefault' in event) {
-      event.preventDefault()
+  function handleSubmit(
+    e?: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>
+  ) {
+    if (e && 'preventDefault' in e) e.preventDefault();
+
+    const validationErrors = validateForm(formData);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
     }
 
-    try {
-      const validationErrors = validateForm(formData)
-      
-      if (Object.keys(validationErrors).length > 0) {
-        setErrors(validationErrors)
-        return
-      }
-      const apiData = mapFormDataToApiRequest(formData, trackingData)
-      
-      setErrors({})
-      createUserMutation.mutate(apiData)
-      
-    } catch (error) {
-      setErrors({ 
-        submit: error instanceof Error ? error.message : 'Erro desconhecido ao processar formulário' 
-      })
-    }
+    const apiPayload = mapFormDataToApiRequest(formData, { attribution });
+    setErrors({});
+    createUserMutation.mutate(apiPayload);
   }
 
-  const phoneState = formData.telefone ? getStateFromPhone(formData.telefone) : null
+  const phoneState = formData.telefone ? getStateFromPhone(formData.telefone) : null;
 
   if (submitted) {
     return (
@@ -104,7 +136,7 @@ export default function ContactForm() {
         <p className="text-gray-600 mb-4">
           Obrigado pelo seu contato. Nossa equipe entrará em contato em breve.
         </p>
-        <Button 
+        <Button
           onClick={() => setSubmitted(false)}
           variant="outline"
           className="border-logic-green text-logic-green hover:bg-logic-green hover:text-black"
@@ -112,7 +144,7 @@ export default function ContactForm() {
           Enviar Nova Mensagem
         </Button>
       </div>
-    )
+    );
   }
 
   return (
@@ -122,16 +154,16 @@ export default function ContactForm() {
           <Label htmlFor="nome" className="text-xs font-semibold text-gray-200 mb-1 block">
             Nome Completo *
           </Label>
-          <Input
-            id="nome"
-            type="text"
-            value={formData.nome}
-            onChange={(e) => handleInputChange('nome', e.target.value)}
-            className={`bg-white/10 border-white/20 text-white placeholder:text-gray-300 focus:border-logic-green focus:ring-logic-green/20 h-9 text-sm ${
-              errors.nome ? 'border-red-500' : ''
-            }`}
-            placeholder="Digite seu nome completo"
-          />
+            <Input
+              id="nome"
+              type="text"
+              value={formData.nome}
+              onChange={e => handleInputChange('nome', e.target.value)}
+              className={`bg-white/10 border-white/20 text-white placeholder:text-gray-300 focus:border-logic-green focus:ring-logic-green/20 h-9 text-sm ${
+                errors.nome ? 'border-red-500' : ''
+              }`}
+              placeholder="Digite seu nome completo"
+            />
           {errors.nome && <p className="text-red-400 text-xs mt-1">{errors.nome}</p>}
         </div>
 
@@ -143,7 +175,7 @@ export default function ContactForm() {
             id="email"
             type="email"
             value={formData.email}
-            onChange={(e) => handleInputChange('email', e.target.value)}
+            onChange={e => handleInputChange('email', e.target.value)}
             className={`bg-white/10 border-white/20 text-white placeholder:text-gray-300 focus:border-logic-green focus:ring-logic-green/20 h-9 text-sm ${
               errors.email ? 'border-red-500' : ''
             }`}
@@ -160,7 +192,7 @@ export default function ContactForm() {
             id="telefone"
             type="tel"
             value={formData.telefone}
-            onChange={(e) => handleInputChange('telefone', e.target.value)}
+            onChange={e => handleInputChange('telefone', e.target.value)}
             className={`bg-white/10 border-white/20 text-white placeholder:text-gray-300 focus:border-logic-green focus:ring-logic-green/20 h-9 text-sm ${
               errors.telefone ? 'border-red-500' : ''
             }`}
@@ -168,9 +200,7 @@ export default function ContactForm() {
             maxLength={15}
           />
           {phoneState && (
-            <p className="text-logic-green text-xs mt-1">
-              📍 {phoneState}
-            </p>
+            <p className="text-logic-green text-xs mt-1">📍 {phoneState}</p>
           )}
           {errors.telefone && <p className="text-red-400 text-xs mt-1">{errors.telefone}</p>}
         </div>
@@ -183,7 +213,7 @@ export default function ContactForm() {
             id="cargo"
             type="text"
             value={formData.cargo}
-            onChange={(e) => handleInputChange('cargo', e.target.value)}
+            onChange={e => handleInputChange('cargo', e.target.value)}
             className={`bg-white/10 border-white/20 text-white placeholder:text-gray-300 focus:border-logic-green focus:ring-logic-green/20 h-9 text-sm ${
               errors.cargo ? 'border-red-500' : ''
             }`}
@@ -200,12 +230,14 @@ export default function ContactForm() {
             id="dataNascimento"
             type="date"
             value={formData.dataNascimento}
-            onChange={(e) => handleInputChange('dataNascimento', e.target.value)}
+            onChange={e => handleInputChange('dataNascimento', e.target.value)}
             className={`bg-white/10 border-white/20 text-white focus:border-logic-green focus:ring-logic-green/20 h-9 text-sm ${
               errors.dataNascimento ? 'border-red-500' : ''
             }`}
           />
-          {errors.dataNascimento && <p className="text-red-400 text-xs mt-1">{errors.dataNascimento}</p>}
+          {errors.dataNascimento && (
+            <p className="text-red-400 text-xs mt-1">{errors.dataNascimento}</p>
+          )}
         </div>
 
         <div>
@@ -215,7 +247,7 @@ export default function ContactForm() {
           <Textarea
             id="mensagem"
             value={formData.mensagem}
-            onChange={(e) => handleInputChange('mensagem', e.target.value)}
+            onChange={e => handleInputChange('mensagem', e.target.value)}
             className={`bg-white/10 border-white/20 text-white placeholder:text-gray-300 focus:border-logic-green focus:ring-logic-green/20 min-h-[80px] resize-none text-sm ${
               errors.mensagem ? 'border-red-500' : ''
             }`}
@@ -239,5 +271,5 @@ export default function ContactForm() {
         {createUserMutation.isPending ? 'Enviando...' : 'Enviar Mensagem'}
       </Button>
     </form>
-  )
+  );
 }

@@ -17,7 +17,6 @@ export async function POST(request: NextRequest) {
       )  
     }
     
-    // Validar campos obrigatórios
     const requiredFields = ['name', 'email', 'phone', 'position', 'birthDate', 'message']
     
     for (const field of requiredFields) {
@@ -29,7 +28,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Simular processamento e salvar (aqui você integraria com um banco de dados)
     const userData = {
       id: crypto.randomUUID(),
       ...body,
@@ -38,7 +36,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(userData, { status: 201 })
   } catch (error) {
-    // Verificar se é erro de JSON parse
     if (error instanceof SyntaxError && error.message.includes('JSON')) {
       return NextResponse.json(
         { 

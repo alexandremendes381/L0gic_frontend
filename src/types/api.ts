@@ -2,9 +2,6 @@ import { FormData } from '@/lib/validation'
 import { CreateUserRequest } from '@/services/userService'
 import { TrackingData } from '@/hooks/useTracking'
 
-/**
- * Converte dados do formulário para o formato da API
- */
 export function mapFormDataToApiRequest(
   formData: FormData, 
   trackingData?: TrackingData
@@ -19,9 +16,6 @@ export function mapFormDataToApiRequest(
   }
 }
 
-/**
- * Interface para o estado de submissão do formulário
- */
 export interface FormSubmissionState {
   isLoading: boolean
   isSuccess: boolean
