@@ -1,18 +1,18 @@
 'use client';
 
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { pushDataLayer } from '@/lib/gtmConfig';
 
-export function UsePageView() {
+function PageViewTracker() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const isFirstLoad = useRef(true);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const query = searchParams.toString();
+    const urlParams = new URLSearchParams(window.location.search);
+    const query = urlParams.toString();
     const fullPath = pathname + (query ? `?${query}` : '');
 
     pushDataLayer({
@@ -28,7 +28,11 @@ export function UsePageView() {
     });
 
     isFirstLoad.current = false;
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   return null;
+}
+
+export function UsePageView() {
+  return <PageViewTracker />;
 }

@@ -2,7 +2,7 @@ import './globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { ReactQueryProvider } from '@/components/ReactQueryProvider'
-import { GoogleAnalytics, GoogleTagManager } from '@next/third-parties/google'
+import { GoogleTagManager } from '@next/third-parties/google'
 import { UsePageView } from '@/hooks/usePageView'
 
 const inter = Inter({ subsets: ['latin'] })
